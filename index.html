@@ -45,7 +45,7 @@
         import React, { useState, useEffect } from 'react';
         import { createRoot } from 'react-dom/client';
         import { PieChart, Pie, Cell, ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip as RechartsTooltip, Legend } from 'recharts';
-        import { Upload, Save, RotateCcw, Activity, FileText, CheckCircle, Smartphone, Smile, AlertCircle, MapPin, X, Copy, Table as TableIcon, LayoutDashboard, Zap, Filter, CreditCard, History, Clock, ArrowRightLeft, Trash2, Eye } from 'lucide-react';
+        import { Upload, Save, RotateCcw, Activity, FileText, CheckCircle, Smartphone, Smile, AlertCircle, MapPin, X, Copy, Table as TableIcon, LayoutDashboard, Zap, Filter, CreditCard, History, Clock, ArrowRightLeft, Trash2, Eye, ChevronDown, ChevronUp } from 'lucide-react';
 
         // --- UI Components ---
         const Card = ({ children, className = "" }) => (
@@ -136,6 +136,16 @@
             const [compareB, setCompareB] = useState('');
             const [saveNote, setSaveNote] = useState('');
             const [notification, setNotification] = useState(null);
+            const [expandedUnit, setExpandedUnit] = useState(null); // State để mở rộng chi tiết
+
+            const criteriaMapping = [
+                { key: 'congKhai', label: '1. Công khai, minh bạch' },
+                { key: 'tienDo', label: '2. Tiến độ giải quyết' },
+                { key: 'dvcTrucTuyen', label: '3. DVC trực tuyến' },
+                { key: 'thanhToanTrucTuyen', label: '4. Thanh toán TT' },
+                { key: 'soHoa', label: '5. Số hóa hồ sơ' },
+                { key: 'haiLong', label: '6. Mức độ hài lòng' },
+            ];
 
             useEffect(() => {
                 try {
@@ -195,6 +205,10 @@
                 if (!id) return null;
                 if (id === 'current') return { note: 'Dữ liệu hiện tại', data: currentData };
                 return snapshots.find(s => s.id.toString() === id.toString());
+            };
+
+            const toggleExpand = (unit) => {
+                setExpandedUnit(expandedUnit === unit ? null : unit);
             };
 
             if (!isOpen) return null;
@@ -293,7 +307,8 @@
                                                                 <th className="px-4 py-3">Đơn vị</th>
                                                                 <th className="px-4 py-3 text-right">{dataA.note}</th>
                                                                 <th className="px-4 py-3 text-right">{dataB.note}</th>
-                                                                <th className="px-4 py-3 text-right">Chênh lệch</th>
+                                                                <th className="px-4 py-3 text-right">Tổng +/-</th>
+                                                                <th className="px-4 py-3 w-10"></th>
                                                             </tr>
                                                         </thead>
                                                         <tbody className="divide-y divide-slate-100">
@@ -303,16 +318,60 @@
                                                                 const diff = scoreB - scoreA;
                                                                 const diffColor = diff > 0 ? 'text-green-600' : diff < 0 ? 'text-red-600' : 'text-slate-400';
                                                                 const diffSign = diff > 0 ? '+' : '';
+                                                                const isExpanded = expandedUnit === unit;
 
                                                                 return (
-                                                                    <tr key={unit} className="hover:bg-slate-50">
-                                                                        <td className="px-4 py-3 font-bold text-slate-700">{unit}</td>
-                                                                        <td className="px-4 py-3 text-right font-mono text-slate-600">{scoreA.toFixed(2)}</td>
-                                                                        <td className="px-4 py-3 text-right font-mono text-blue-600 font-bold">{scoreB.toFixed(2)}</td>
-                                                                        <td className={`px-4 py-3 text-right font-mono font-bold ${diffColor}`}>
-                                                                            {diffSign}{diff.toFixed(2)}
-                                                                        </td>
-                                                                    </tr>
+                                                                    <React.Fragment key={unit}>
+                                                                        <tr onClick={() => toggleExpand(unit)} className={`hover:bg-slate-50 cursor-pointer transition-colors ${isExpanded ? 'bg-blue-50/50' : ''}`}>
+                                                                            <td className="px-4 py-3 font-bold text-slate-700">{unit}</td>
+                                                                            <td className="px-4 py-3 text-right font-mono text-slate-600">{scoreA.toFixed(2)}</td>
+                                                                            <td className="px-4 py-3 text-right font-mono text-blue-600 font-bold">{scoreB.toFixed(2)}</td>
+                                                                            <td className={`px-4 py-3 text-right font-mono font-bold ${diffColor}`}>
+                                                                                {diffSign}{diff.toFixed(2)}
+                                                                            </td>
+                                                                            <td className="px-4 py-3 text-center text-slate-400">
+                                                                                {isExpanded ? <ChevronUp size={16}/> : <ChevronDown size={16}/>}
+                                                                            </td>
+                                                                        </tr>
+                                                                        {isExpanded && (
+                                                                            <tr>
+                                                                                <td colSpan="5" className="px-4 py-3 bg-slate-50/80 border-b border-slate-100 p-4">
+                                                                                    <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
+                                                                                        <table className="w-full text-xs">
+                                                                                            <thead className="bg-slate-100 text-slate-500 uppercase">
+                                                                                                <tr>
+                                                                                                    <th className="px-3 py-2 text-left">Tiêu chí chi tiết</th>
+                                                                                                    <th className="px-3 py-2 text-right">Điểm cũ</th>
+                                                                                                    <th className="px-3 py-2 text-right">Điểm mới</th>
+                                                                                                    <th className="px-3 py-2 text-right">Thay đổi</th>
+                                                                                                </tr>
+                                                                                            </thead>
+                                                                                            <tbody className="divide-y divide-slate-100">
+                                                                                                {criteriaMapping.map(cri => {
+                                                                                                    const valA = Number(dataA.data[unit][cri.key] || 0);
+                                                                                                    const valB = Number(dataB.data[unit][cri.key] || 0);
+                                                                                                    const criDiff = valB - valA;
+                                                                                                    const cDiffColor = criDiff > 0 ? 'text-green-600' : criDiff < 0 ? 'text-red-600' : 'text-slate-300';
+                                                                                                    const cDiffSign = criDiff > 0 ? '+' : '';
+
+                                                                                                    return (
+                                                                                                        <tr key={cri.key}>
+                                                                                                            <td className="px-3 py-2 font-medium text-slate-700">{cri.label}</td>
+                                                                                                            <td className="px-3 py-2 text-right text-slate-500">{valA}</td>
+                                                                                                            <td className="px-3 py-2 text-right text-slate-800 font-bold">{valB}</td>
+                                                                                                            <td className={`px-3 py-2 text-right font-bold ${cDiffColor}`}>
+                                                                                                                {cDiffSign}{parseFloat(criDiff.toFixed(2))}
+                                                                                                            </td>
+                                                                                                        </tr>
+                                                                                                    );
+                                                                                                })}
+                                                                                            </tbody>
+                                                                                        </table>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        )}
+                                                                    </React.Fragment>
                                                                 );
                                                             })}
                                                         </tbody>
